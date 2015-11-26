@@ -1,11 +1,18 @@
+LANG_EN = "en"
+LANG_FR = "fr"
 
-def correct_spelling(word, lang = "en"):
+def correct_spelling(word, lang = LANG_EN):
+    import enchant
     """
     :param word: the word requiring correction
     :param lang: language of the word
     :return: the most probable correct version of the input word
     """
-    pass
+    d = enchant.request_dict(lang)
+    if not d.check(word):
+        return d.suggest(word)[0]
+
+    return word
 
 
 def generate_ngrams(text, size):
@@ -17,7 +24,7 @@ def generate_ngrams(text, size):
     """
     pass
 
-def remove_stopwords(text, lang = "en"):
+def remove_stopwords(text, lang = LANG_EN):
     """
     :param text: Unicode string or list of words
     :param lang: Language for which to filter stopwords
@@ -25,9 +32,15 @@ def remove_stopwords(text, lang = "en"):
     """
     pass
 
-def apply_pos_tag(text, lang = "en"):
+def apply_pos_tag(text, lang = LANG_EN):
     """
     :param text: Single word or sentence
     :param lang: language for which to apply POS-tagging
-    :return: The original sentence where each word tagged (using /<tag>) with its corresponding part of speech
+    :return: A list of tuples of the (word,tag) pairs
     """
+    if lang == LANG_FR:
+        from pattern.text.fr import tag
+    else:
+        from pattern.text.en import tag
+
+    return tag(text)
