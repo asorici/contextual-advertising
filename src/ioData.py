@@ -18,3 +18,9 @@ def writeData(df, filename):
     assert isinstance(df, pd.DataFrame)
     df.to_json(filename)
     return
+
+aux = []
+for x in df.anchors:
+     for y in x:
+         if not y.values()[0].startswith("http://www.generation-nt.com"):
+             aux = aux + [y.keys()[0]]
