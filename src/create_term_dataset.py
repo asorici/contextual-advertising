@@ -167,25 +167,31 @@ def compute_term_features(doc_list, global_term_dict, df_raw, store_filename):
 
 
 
-def create_term_test_dataset():
+def create_term_train_test_dataset(global_term_feature_file, extracted_test_terms_file, train_feature_file, test_feature_file):
     import ioData as io
-    df = io.readData("dataset/term-feature-dataset.json")
+    df = io.readData(global_term_feature_file)
 
     cvalRes = None
-    with open("dataset/extracted_terms_grapeshot_common.json") as fp:
+    with open(extracted_test_terms_file) as fp:
         cvalRes = json.load(fp, encoding="utf-8")
 
     test_urls = cvalRes.keys()
     test_df = df.loc[df['doc_url'].isin(test_urls)]
+    io.writeData(test_df, test_feature_file)
 
-    return test_df
+    train_df = df.loc[~df.index.isin(test_df.index)]
+    io.writeData(train_df, train_feature_file)
+    #return train_df, test_df
+
 
 # for term in test_doc_list[0].relevant_terms:
 #     print term.transformed
 
 if __name__ == "__main__":
     df_raw = read_raw_data("dataset/preProc2_lower.json")
-    doc_list, global_term_dict = create_documents("dataset/extracted_terms_all.json", df_raw)
+    doc_list, global_term_dict = create_documents("dataset/extracted_terms_all_v2.json", df_raw)
 
-    term_feature_file = "dataset/term-feature-dataset.json"
+    term_feature_file = "dataset/term-feature-dataset-v2.json"
     compute_term_features(doc_list, global_term_dict, df_raw, term_feature_file)
+
+    create_term_train_test_dataset(term_feature_file, "dataset/extracted_terms_grapeshot_common_v2.json", "dataset/term-feature-train-dataset-v2.json", "dataset/term-feature-test-dataset-v2.json")
