@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Set these paths appropriately
+
+BIN=/home/alex/work/SIEN/SIEN-ad-matching/misc-resources/TreeTagger/bin
+CMD=/home/alex/work/SIEN/SIEN-ad-matching/misc-resources/TreeTagger/cmd
+LIB=/home/alex/work/SIEN/SIEN-ad-matching/misc-resources/TreeTagger/lib
+
+OPTIONS="-token -lemma -sgml"
+
+TAGGER=${BIN}/tree-tagger
+TOKENIZER=${CMD}/utf8-tokenize.perl
+PARFILE=${LIB}/slovenian-utf8.par
+
+$TOKENIZER $* |
+$TAGGER $OPTIONS $PARFILE
