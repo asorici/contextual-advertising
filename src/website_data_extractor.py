@@ -1,19 +1,41 @@
-from graphlab.cython.context import debug_trace
+#from graphlab.cython.context import debug_trace
 
 __author__ = 'andrei'
 
-import numpy as np
 from lxml import etree
-import urllib2
+import urllib2, sys, re
 import xml.etree.ElementTree as ET
+
+try:
+    # for beautifulsoup v4
+    import bs4
+    sys.modules['BeautifulSoup'] = bs4
+except ImportError:
+    # for beautifulsoup v3
+    import BeautifulSoup
+    sys.modules['BeautifulSoup'] = BeautifulSoup
+
 from lxml.html.soupparser import fromstring
 
-class WebsiteDataExtractor:
+
+class WebsiteDataExtractor(object):
+    DOMAIN = "domain"
+    TITLE = "title"
+    SUMMARY = "summary"
+    MAIN_TEXT = "mainText"
+    HYPERLINKS = "hyperlinks"
+    IMAGE_CAPTION = "imageCaption"
+    URL_TOKENS = "urlTokens"
+
+    URL_TOKEN_SEPARATOR = "-"
+
+    CONCAT_ANSWERS = ["title"]
+    CONCAT_SENTENCES = ["summary"]
+    GROUP_BY_CHILDREN = ["mainText"]
+
     parser = etree.HTMLParser()
     defaultPaths = {}
     customPaths = {}
-    CONCAT_ANSWERS = ["title", "summary"]
-    GROUP_BY_CHILDREN = ["mainText"]
 
     def __init__(self, definitionsFile):
         tree = ET.parse(definitionsFile)
@@ -43,25 +65,61 @@ class WebsiteDataExtractor:
         return self.defaultPaths
 
     @staticmethod
-    def clean_string(text):
-        import re
-
-        #keep only numbers and letters
-        text = u''.join(map(lambda x: x if ( (str.isalnum(x) if isinstance(x, str) else unicode.isalnum(x)) or x == " ") else " ", text))
-
-        #lowercase only
+    def clean_string_partial(text):
+        # lowercase only
         text = text.lower()
 
+        # remove multiple spaces (newlines and tab characters)
         multiSpacePattern = re.compile(r'\s+')
         text = re.sub(multiSpacePattern, " ", text)
 
+        # remove inline <script> tags
+        return re.sub(r"<script>.*<\/script>", " ", text)
+
+    @staticmethod
+    def clean_string_full(text):
+        # keep only numbers and letters
+        text = u''.join(map(lambda x: x if ( (str.isalnum(x) if isinstance(x, str) else unicode.isalnum(x)) or x == " ") else " ", text))
+
+        # lowercase only
+        text = text.lower()
+
+        # remove multiple spaces (newlines and tab characters)
+        multiSpacePattern = re.compile(r'\s+')
+        text = re.sub(multiSpacePattern, " ", text)
+
+        # remove inline <script> tags
         text = re.sub(r"<script>.*<\/script>", " ", text)
 
         return text.strip()
 
     @staticmethod
     def tokenizeWebsiteUrl(url):
-        return ""
+        from urlparse import urlparse
+        o = urlparse(url)
+
+        if o.path is None or not o.path:
+            return []
+        else:
+            url_path = o.path
+
+            # remove last slash if there is one
+            if url_path[-1] == '/':
+                url_path = url_path[:-1]
+
+            last_slash_index = url_path.rfind('/')
+            url_path = url_path[last_slash_index + 1:]
+
+            # split url by last '.' character, if there is one, and take the first item
+            token_path = url_path.split('.')[0]
+
+            # remove numbers from token path
+            numeric_regex = r"(" + WebsiteDataExtractor.URL_TOKEN_SEPARATOR + "[0-9]+)*"
+            token_path = re.sub(numeric_regex, "", token_path)
+
+            tokens = token_path.split(WebsiteDataExtractor.URL_TOKEN_SEPARATOR)
+            return tokens
+
 
     def crawlPage(self, page):
         tree = etree.fromstring(urllib2.urlopen(page).read(), self.parser)
@@ -72,7 +130,9 @@ class WebsiteDataExtractor:
             s = tree.xpath(elPattern)
 
             if el in self.CONCAT_ANSWERS:
-                s = self.clean_string(" ".join(s))
+                s = self.clean_string_full(" ".join(s))
+            elif el in self.CONCAT_SENTENCES:
+                s = self.clean_string_partial(" ".join(s))
             elif el in self.GROUP_BY_CHILDREN:
                 ls = []
                 for aux in s:
@@ -84,9 +144,9 @@ class WebsiteDataExtractor:
                         if (val):
                             ls = ls + [val]
                 s = map(lambda x: " ".join(x), ls)
-                s = map(self.clean_string, s)
+                s = map(self.clean_string_partial, s)
             else:
-                s = map(self.clean_string, s)
+                s = map(self.clean_string_partial, s)
                 s = filter(None, s)
 
             pageData[el] = s
@@ -95,8 +155,6 @@ class WebsiteDataExtractor:
 
 
 
-
-
-test = WebsiteDataExtractor("/Users/andrei/Documents/SIEN/contextual-advertisingPyP/contextual-advertising/dataset/WebsiteElementsPathDef.xml")
-d = test.crawlPage("http://www.generation-nt.com/rechauffement-climatique-ere-glaciaire-retard-actualite-1923734.html")
+#test = WebsiteDataExtractor("dataset/WebsiteElementsPathDef.xml")
+#d = test.crawlPage("http://www.generation-nt.com/rechauffement-climatique-ere-glaciaire-retard-actualite-1923734.html")
 
