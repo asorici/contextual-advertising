@@ -250,9 +250,9 @@ def create_term_train_test_dataset(global_term_feature_file, extracted_test_term
 
 if __name__ == "__main__":
     df_raw = read_raw_data("dataset/preProc2_lower.json")
-    doc_list, global_term_dict = create_documents("dataset/extracted_terms_all_v2.json", df_raw)
+    doc_list, global_term_dict = create_documents("dataset/extracted_terms_all_v3.json", df_raw)
 
-    term_feature_file = "dataset/term-feature-dataset-v2.json"
+    term_feature_file = "dataset/term-feature-dataset-v3.json"
     compute_term_features(doc_list, global_term_dict, df_raw, term_feature_file)
 
-    create_term_train_test_dataset(term_feature_file, "dataset/extracted_terms_grapeshot_common_v2.json", "dataset/term-feature-train-dataset-v2.json", "dataset/term-feature-test-dataset-v2.json")
+    create_term_train_test_dataset(term_feature_file, "dataset/extracted_terms_grapeshot_common_v3.json", "dataset/term-feature-train-dataset-v3.json", "dataset/term-feature-test-dataset-v3.json")

@@ -9,9 +9,9 @@ from patsy import dmatrices
 
 
 class KeytermClassifier(object):
-    TRAIN_DATASET_SIZE = 10000
+    TRAIN_DATASET_SIZE = 100000
     TEST_DATASET_SIZE = 5000
-    MODEL_STORE_FILE = "dataset/keyterm-classifier-model-v2.pickle"
+    MODEL_STORE_FILE = "dataset/keyterm-classifier-model-v3.pickle"
 
     def __init__(self, train_df_file, test_df_file):
         self.train_df_file = train_df_file
@@ -30,7 +30,9 @@ class KeytermClassifier(object):
         #                           self.selected_train_df, return_type = "dataframe")
         #self.y = np.ravel(self.y)
         # self.X = self.selected_train_df.drop(['relevant', 'doc_url', 'term'], axis = 1)
-        self.X = self.selected_train_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf'], axis = 1)
+
+        #self.X = self.selected_train_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf'], axis = 1)
+        self.X = self.selected_train_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf', 'is_url'], axis = 1)
         self.y = self.selected_train_df['relevant']
 
 
@@ -42,7 +44,8 @@ class KeytermClassifier(object):
         self.selected_test_df = pd.concat([self.pos_test_df, self.neg_test_df])
 
         # self.X_test = self.selected_test_df.drop(['relevant', 'doc_url', 'term'], axis = 1)
-        self.X_test = self.selected_test_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf'], axis = 1)
+        #self.X_test = self.selected_test_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf'], axis = 1)
+        self.X_test = self.selected_test_df.drop(['relevant', 'doc_url', 'term', 'df', 'tfidf', 'is_url'], axis = 1)
         self.y_test = self.selected_test_df['relevant']
 
 
@@ -66,6 +69,41 @@ class KeytermClassifier(object):
         y_pred = self.model.predict(X)
         print classification_report(self.y_test, (y_pred > 0.5).astype(bool))
 
+
+    def _top_selection(self, keyterm_feature_df, topk):
+        selection = []
+
+        for row in keyterm_feature_df.itertuples(index = False):
+            row_set = set(row[12].split())
+
+            subsumed = False
+            subsumes = False
+            subsumes_index = 0
+
+            for idx in range(len(selection)):
+                term_set = set(selection[idx].split())
+
+                if not (row_set - term_set):
+                    subsumed = True
+                    break
+                elif not (term_set - row_set):
+                    subsumes = True
+                    subsumes_index = idx
+                    break
+
+            if subsumed:
+                continue
+            elif subsumes:
+                selection[subsumes_index] = row[12]
+            else:
+                selection.append(row[12])
+
+            if len(selection) == topk:
+                break
+
+        return selection
+
+
     def extract_test_keywords(self, top_k = 10):
         if self.model is None:
             raise ValueError("Untrained classifier! No model exists.")
@@ -81,9 +119,10 @@ class KeytermClassifier(object):
         test_doc_urls = test_df['doc_url'].unique()
         for url in test_doc_urls:
             doc_df = test_df[test_df['doc_url'] == url].copy()
-            doc_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
+            #doc_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
+            doc_df.sort_values(["relevant_pred", "tf"], ascending=[False,False], inplace=True)
 
-            topk_keyterms = ",".join(doc_df[:top_k]['term'].values)
+            topk_keyterms = ",".join(self._top_selection(doc_df, top_k))
             extracted_keyterms.append((url, topk_keyterms))
 
         return pd.DataFrame(extracted_keyterms, columns=["url", "extracted_keyterms"])
@@ -121,6 +160,41 @@ class RelevanceFilter(object):
         self._classifier_file = saved_classifier_file
         self.topk = topk
 
+    def _top_selection(self):
+        selection = []
+
+        for row in self.keyterm_feature_df.itertuples(index = False):
+            row_set = set(row[0].split())
+
+            subsumed = False
+            subsumes = False
+            subsumes_index = 0
+
+            for idx in range(len(selection)):
+                term_set = set(selection[idx].split())
+
+                if not (row_set - term_set):
+                    subsumed = True
+                    break
+                elif not (term_set - row_set):
+                    subsumes = True
+                    subsumes_index = idx
+                    break
+
+            if subsumed:
+                continue
+            elif subsumes:
+                selection[subsumes_index] = row[0]
+            else:
+                selection.append(row[0])
+
+            if len(selection) == self.topk:
+                break
+
+        return selection
+
+
+
     def select_relevant(self):
         from statsmodels.discrete.discrete_model import LogitResults
 
@@ -133,18 +207,20 @@ class RelevanceFilter(object):
         X['intercept'] = 1
 
         self.keyterm_feature_df['relevant_pred'] = model.predict(X)
-        self.keyterm_feature_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
+        #self.keyterm_feature_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
+        self.keyterm_feature_df.sort_values(["relevant_pred", "tf"], ascending=[False,False], inplace=True)
 
-        topk_keyterms = self.keyterm_feature_df[:self.topk]['term'].values
+        #topk_keyterms = self.keyterm_feature_df[:self.topk]['term'].values
+        topk_keyterms = self._top_selection()
         return topk_keyterms
 
 
 
-def extract_test_keywords(retrain = False):
+def extract_test_keywords(train_dataset_file, test_dataset_file, retrain = False):
     import os
     from statsmodels.discrete.discrete_model import LogitResults
 
-    cl = KeytermClassifier("dataset/term-feature-train-dataset-v2.json", "dataset/term-feature-test-dataset-v2.json")
+    cl = KeytermClassifier(train_dataset_file, test_dataset_file)
 
     if os.path.exists(KeytermClassifier.MODEL_STORE_FILE):
         if retrain:
@@ -153,6 +229,10 @@ def extract_test_keywords(retrain = False):
 
             print "Training model ..."
             cl.fit()
+
+            print "Evaluating model ..."
+            cl.prepare_test_set()
+            cl.test()
 
             print "Saving model ..."
             cl.model.save(KeytermClassifier.MODEL_STORE_FILE)
@@ -166,6 +246,10 @@ def extract_test_keywords(retrain = False):
 
         print "Training model ..."
         cl.fit()
+
+        print "Evaluating model ..."
+        cl.prepare_test_set()
+        cl.test()
 
         print "Saving model ..."
         cl.model.save(KeytermClassifier.MODEL_STORE_FILE)
@@ -203,18 +287,22 @@ def has_jwplayer(paragraphs):
 if __name__ == "__main__":
     import ioData
 
+    TRAIN_DATASET_FILE = "dataset/term-feature-train-dataset-v3.json"
+    TEST_DATASET_FILE = "dataset/term-feature-test-dataset-v3.json"
+
     grapeshot_df = pd.read_excel("dataset/meta_keywords_overlaps.xlsx", "Overlaps")
     grapeshot_df = grapeshot_df[["URL", "Keywords"]]
     grapeshot_df.columns = ['url', 'keywords']
     grapeshot_df['keywords'] = grapeshot_df['keywords'].map(lambda x: x.lower())
 
-    extracted_df = extract_test_keywords(True)
+    extracted_df = extract_test_keywords(TRAIN_DATASET_FILE, TEST_DATASET_FILE, retrain=True)
 
     # merge dataframes
     comparison_df = pd.merge(extracted_df, grapeshot_df, on='url')
     comparison_df['overlap'] = comparison_df.apply(extracted_keyterms_overlap, axis = 1)
 
-    ioData.writeData(comparison_df, "dataset/comparison_df_v2.json")
-    comparison_df.to_excel("dataset/comparison_df_v2.xlsx", "Overlap")
+    ioData.writeData(comparison_df, "dataset/comparison_df_v3.json")
+    comparison_df.to_excel("dataset/comparison_df_v3.xlsx", "Overlap")
 
+    print comparison_df.describe()
 
