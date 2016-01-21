@@ -203,12 +203,12 @@ class RelevanceFilter(object):
 
         # prepare feature df
         X = self.keyterm_feature_df.copy()
-        X = X.drop(['doc_url', 'term'], axis = 1)
+        X = X.drop(['doc_url', "is_url", 'term'], axis = 1)
         X['intercept'] = 1
 
         self.keyterm_feature_df['relevant_pred'] = model.predict(X)
-        #self.keyterm_feature_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
-        self.keyterm_feature_df.sort_values(["relevant_pred", "tf"], ascending=[False,False], inplace=True)
+        self.keyterm_feature_df.sort_values(["relevant_pred", "cvalue"], ascending=[False,False], inplace=True)
+        # self.keyterm_feature_df.sort_values(["relevant_pred", "tf"], ascending=[False,False], inplace=True)
 
         #topk_keyterms = self.keyterm_feature_df[:self.topk]['term'].values
         topk_keyterms = self._top_selection()

@@ -82,4 +82,4 @@ class KeyTermExtractor(object):
 
         print "Performing cleanup ..."
         # 4) cleanup
-        self._cleanup()
+        # self._cleanup()
