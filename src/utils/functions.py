@@ -7,6 +7,22 @@ from nltk.corpus import stopwords
 ## GENERAL CONSTANTS
 LANG_EN = "english"
 LANG_FR = "french"
+LANG_ES = "spanish"
+LANG_PT = "portuguese"
+LANG_IT = "italian"
+LANG_DE = "german"
+
+LANG_ABREV = {
+    LANG_EN : "en",
+    LANG_FR : "fr",
+    LANG_ES : "es",
+    LANG_PT : "pt",
+    LANG_IT : "it",
+    LANG_DE : "de"
+}
+
+
+
 import numpy as np
 import pandas as pd
 
