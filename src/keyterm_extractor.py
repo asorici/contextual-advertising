@@ -210,13 +210,17 @@ class KeyTermExtractor2(object):
                         for term_slice in selected_term_slices:
                             diff = term_slice[1] - term_slice[0]
                             if diff == 1:
-                                self.result_dict['t1gram'].append(" ".join([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
+                                self.result_dict['t1gram'].append(([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]],
+                                                                   [info['lemma'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
                             elif diff == 2:
-                                self.result_dict['t2gram'].append(" ".join([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
+                                self.result_dict['t2gram'].append(([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]],
+                                                                   [info['lemma'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
                             elif diff == 3:
-                                self.result_dict['t3gram'].append(" ".join([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
+                                self.result_dict['t3gram'].append(([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]],
+                                                                   [info['lemma'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
                             else:
-                                self.result_dict['t4gram'].append(" ".join([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
+                                self.result_dict['t4gram'].append(([info['word'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]],
+                                                                   [info['lemma'] for info in clean_sentence_info[term_slice[0] : term_slice[1]]]))
 
 
         except Exception as ex:

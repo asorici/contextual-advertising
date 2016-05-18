@@ -2,3 +2,7 @@ misc-resources/
 biotex-term-extraction/TreeTagger
 .idea/
 *.pyc
+dataset/
+dataset2/
+PoC-README.txt
+reports/
